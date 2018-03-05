@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+
 GPUID = 1
 os.environ["CUDA_VISIBLE_DEVICES"] = str(GPUID)
 import numpy as np
@@ -15,7 +16,7 @@ import scipy.io as sio
 
 """ parameters """
 n_epoch = 200
-batch_size  = 100
+batch_size = 100
 dataset_size = 55000
 input_dim = 784
 latent_dim = 2
@@ -29,58 +30,69 @@ h_dim = 128
 lr = 1e-4
 d_steps = 3
 
+
 #####################################
 def sample_Z(m, n):
     return np.random.uniform(-1., 1., size=[m, n])
+
+
 def log(x):
     return tf.log(x + 1e-8)
     # return x
+
+
 """ Create dataset """
 
 # Create X dataset by importing MNIST data
 
 from tensorflow.examples.tutorials.mnist import input_data
+
 mnist = input_data.read_data_sets("MNIST_data", one_hot=False)
 
 # trX, trY, teX, teY = mnist.train.images, mnist.train.labels, mnist.test.images, mnist.test.labels
 
 """ data pre-process """
 X_labeled = []
-num_per_class = 10 # can be changed to different percentage
+num_per_class = 10  # can be changed to different percentage
 count = np.zeros(10)
 while True:
     tempx, tempy = mnist.train.next_batch(1)
-    if np.sum(count) == 10*num_per_class:
+    if np.sum(count) == 10 * num_per_class:
         break
     if count[tempy] < num_per_class:
         count[tempy] += 1
         X_labeled.append(tempx)
-    else: continue
+    else:
+        continue
 
 X_labeled = np.squeeze(np.float32(X_labeled))
 # pdb.set_trace()
 
 y_labeled = np.reshape(X_labeled, [-1, 28, 28])
 y_labeled = scipy.ndimage.interpolation.rotate(y_labeled, 90, axes=(1, 2))
-y_labeled = np.reshape(y_labeled, [-1, 28*28])
+y_labeled = np.reshape(y_labeled, [-1, 28 * 28])
 
 X_unlabeled, y_unlabeled = mnist.train.next_batch(50000)
-y_unlabeled = np.reshape(X_unlabeled, [-1,28,28])
+y_unlabeled = np.reshape(X_unlabeled, [-1, 28, 28])
 y_unlabeled = scipy.ndimage.interpolation.rotate(y_unlabeled, 90, axes=(1, 2))
-y_unlabeled = np.reshape(y_unlabeled, [-1, 28*28])
+y_unlabeled = np.reshape(y_unlabeled, [-1, 28 * 28])
+
 
 ##################
-def sample_XY(X,Y, size):
-    start_idx = np.random.randint(0, X.shape[0]-size)
-    return X[start_idx:start_idx+size], Y[start_idx:start_idx+size]
+def sample_XY(X, Y, size):
+    start_idx = np.random.randint(0, X.shape[0] - size)
+    return X[start_idx:start_idx + size], Y[start_idx:start_idx + size]
+
 
 def sample_X(X, size):
-    start_idx = np.random.randint(0, X.shape[0]-size)
-    return X[start_idx:start_idx+size]
+    start_idx = np.random.randint(0, X.shape[0] - size)
+    return X[start_idx:start_idx + size]
+
 
 def sample_Y(Y, size):
-    start_idx = np.random.randint(0, Y.shape[0]-size)
-    return Y[start_idx:start_idx+size]
+    start_idx = np.random.randint(0, Y.shape[0] - size)
+    return Y[start_idx:start_idx + size]
+
 
 def plot(samples):
     fig = plt.figure(figsize=(4, 4))
@@ -96,23 +108,31 @@ def plot(samples):
         plt.imshow(sample.reshape(28, 28), cmap='Greys_r')
 
     return fig
+
+
 #####################
 
 """ Networks """
+
+
 def generative_Y2X(y):
     with tf.variable_scope("Y2X"):
-        h = encoder(y, 28*28)
+        h = encoder(y, 28 * 28)
     return h
+
+
 def generative_X2Y(x):
     with tf.variable_scope("X2Y"):
-        h = encoder(x, 28*28)
+        h = encoder(x, 28 * 28)
     return h
+
 
 def data_network_1(x, y):
     """Approximate z log data density."""
     with tf.variable_scope('D1'):
         d = discriminator(x, y)
     return tf.squeeze(d, squeeze_dims=[1])
+
 
 def data_network_2(x, y):
     """Approximate z log data density."""
@@ -148,7 +168,7 @@ L_D2 = -tf.reduce_mean(log(D2_real) + log(1 - D2_fake))
 D_loss = L_D1 + L_D2
 
 # Generator loss
-L_G1 = -tf.reduce_mean(log(D1_fake_y) + log(1-D2_real))
+L_G1 = -tf.reduce_mean(log(D1_fake_y) + log(1 - D2_real))
 L_G2 = -tf.reduce_mean(log(D1_fake_X) + log(D2_fake))
 
 G_loss = L_G1 + L_G2
@@ -175,7 +195,6 @@ sess.run(tf.global_variables_initializer())
 
 if not os.path.exists('out_semi_gan_1000/'):
     os.makedirs('out_semi_gan_1000/')
-
 
 i = 0
 init = tf.global_variables_initializer()
@@ -221,7 +240,7 @@ for it in range(10000000):
         input_A, label = mnist.test.next_batch(10000)
         input_B = np.reshape(input_A, [-1, 28, 28])
         input_B = scipy.ndimage.interpolation.rotate(input_B, 90, axes=(1, 2))
-        input_B = np.reshape(input_B, [-1, 28*28])
+        input_B = np.reshape(input_B, [-1, 28 * 28])
         samples_A = sess.run(X_gen, feed_dict={y_u: input_B})
         samples_A = np.reshape(samples_A, [-1, 28, 28])
         samples_B = sess.run(y_gen, feed_dict={X_u: input_A})

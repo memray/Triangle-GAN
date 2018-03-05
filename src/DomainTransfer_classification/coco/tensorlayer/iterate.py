@@ -6,6 +6,7 @@
 import numpy as np
 from six.moves import xrange
 
+
 def minibatches(inputs=None, targets=None, batch_size=None, shuffle=False):
     """Generate a generator that input a group of example in numpy.array and
     their labels, return the examples and labels by the given batchsize.
@@ -52,6 +53,7 @@ def minibatches(inputs=None, targets=None, batch_size=None, shuffle=False):
         else:
             excerpt = slice(start_idx, start_idx + batch_size)
         yield inputs[excerpt], targets[excerpt]
+
 
 def seq_minibatches(inputs, targets, batch_size, seq_length, stride=1):
     """Generate a generator that return a batch of sequence inputs and targets.
@@ -112,6 +114,7 @@ def seq_minibatches(inputs, targets, batch_size, seq_length, stride=1):
         flatten_inputs = seq_inputs.reshape((-1,) + inputs.shape[1:])
         flatten_targets = seq_targets.reshape((-1,) + targets.shape[1:])
         yield flatten_inputs, flatten_targets
+
 
 def seq_minibatches2(inputs, targets, batch_size, num_steps):
     """Generate a generator that iterates on two list of words. Yields (Returns) the source contexts and
@@ -183,7 +186,7 @@ def seq_minibatches2(inputs, targets, batch_size, num_steps):
     batch_len = data_len // batch_size
     # data = np.zeros([batch_size, batch_len])
     data = np.zeros((batch_size, batch_len) + inputs.shape[1:],
-                          dtype=inputs.dtype)
+                    dtype=inputs.dtype)
     data2 = np.zeros([batch_size, batch_len])
 
     for i in range(batch_size):
@@ -196,8 +199,8 @@ def seq_minibatches2(inputs, targets, batch_size, num_steps):
         raise ValueError("epoch_size == 0, decrease batch_size or num_steps")
 
     for i in range(epoch_size):
-        x = data[:, i*num_steps:(i+1)*num_steps]
-        x2 = data2[:, i*num_steps:(i+1)*num_steps]
+        x = data[:, i * num_steps:(i + 1) * num_steps]
+        x2 = data2[:, i * num_steps:(i + 1) * num_steps]
         yield (x, x2)
 
 
@@ -273,11 +276,9 @@ def ptb_iterator(raw_data, batch_size, num_steps):
         raise ValueError("epoch_size == 0, decrease batch_size or num_steps")
 
     for i in range(epoch_size):
-        x = data[:, i*num_steps:(i+1)*num_steps]
-        y = data[:, i*num_steps+1:(i+1)*num_steps+1]
+        x = data[:, i * num_steps:(i + 1) * num_steps]
+        y = data[:, i * num_steps + 1:(i + 1) * num_steps + 1]
         yield (x, y)
-
-
 
 # def minibatches_for_sequence2D(inputs, targets, batch_size, sequence_length, stride=1):
 #     """

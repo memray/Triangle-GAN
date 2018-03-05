@@ -5,6 +5,7 @@
 
 import tensorflow as tf
 
+
 def identity(x, name=None):
     """The identity activation function, Shortcut is ``linear``.
 
@@ -20,8 +21,10 @@ def identity(x, name=None):
     """
     return x
 
+
 # Shortcut
 linear = identity
+
 
 def ramp(x=None, v_min=0, v_max=1, name=None):
     """The ramp activation function.
@@ -43,6 +46,7 @@ def ramp(x=None, v_min=0, v_max=1, name=None):
     A `Tensor` with the same type as `x`.
     """
     return tf.clip_by_value(x, clip_value_min=v_min, clip_value_max=v_max, name=name)
+
 
 def leaky_relu(x=None, alpha=0.1, name="LeakyReLU"):
     """The LeakyReLU, Shortcut is ``lrelu``.
@@ -74,8 +78,10 @@ def leaky_relu(x=None, alpha=0.1, name="LeakyReLU"):
         x = tf.maximum(x, alpha * x)
     return x
 
-#Shortcut
+
+# Shortcut
 lrelu = leaky_relu
+
 
 def pixel_wise_softmax(output, name='pixel_wise_softmax'):
     """Return the softmax outputs of images, every pixels have multiple label, the sum of a pixel is 1.

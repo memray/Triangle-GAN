@@ -1,9 +1,15 @@
-import pickle, imp, time
-import gzip, logging, operator, os
+import gzip
+import imp
+import logging
+import operator
+import os
 import os.path as osp
+import pickle
+import time
+
+import coloredlogs
 import numpy as np
 from path import Path
-import coloredlogs
 
 
 def convert2dict(params):
@@ -47,6 +53,7 @@ def load_dict(fname):
         param_dict = convert2dict(params_load)
     return param_dict
 
+
 def load_weights_trainable(fname, l_out):
     import lasagne
     params = lasagne.layers.get_all_params(l_out, trainable=True)
@@ -78,7 +85,6 @@ def load_weights_trainable(fname, l_out):
                          .format(param.name, fname))
 
 
-
 def load_weights(fname, l_out):
     import lasagne
     params = lasagne.layers.get_all_params(l_out)
@@ -93,6 +99,7 @@ def load_weights(fname, l_out):
     else:
         param_dict = load_dict(fname)
     assign_weights(params, param_dict)
+
 
 def assign_weights(params, param_dict):
     for param in params:
@@ -124,13 +131,13 @@ def get_list_name(obj):
 
 # write commandline parameters to header of logfile
 def build_log_file(cfg):
-    FORMAT="%(asctime)s;%(levelname)s|%(message)s"
-    DATEF="%H-%M-%S"
+    FORMAT = "%(asctime)s;%(levelname)s|%(message)s"
+    DATEF = "%H-%M-%S"
     logging.basicConfig(formatter=FORMAT, level=logging.DEBUG)
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler(filename=os.path.join(cfg['outfolder'], 'logfile'+time.strftime("%m-%d")+'.log'))
+    fh = logging.FileHandler(filename=os.path.join(cfg['outfolder'], 'logfile' + time.strftime("%m-%d") + '.log'))
     fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s;%(levelname)s|%(message)s", "%H:%M:%S")
     fh.setFormatter(formatter)
@@ -142,9 +149,8 @@ def build_log_file(cfg):
         verbose=dict(),
         warning=dict(color='blue'),
         error=dict(color='yellow'),
-        critical=dict(color='red',bold=True))
+        critical=dict(color='red', bold=True))
     coloredlogs.install(level=logging.DEBUG, fmt=FORMAT, datefmt=DATEF, level_styles=LEVEL_STYLES)
-
 
     args_dict = cfg
     sorted_args = sorted(args_dict.items(), key=operator.itemgetter(0))
@@ -170,7 +176,7 @@ def get_cfg(args):
     cfg['outfolder'] = os.path.join(cfg['outfolder'], cfg['name'])
     res_out = cfg['outfolder']
     if 'key_point' in cfg:
-        res_out += '.'+ cfg['key_point']
+        res_out += '.' + cfg['key_point']
         if cfg['key_point'] in cfg:
             res_out += '-' + str(cfg[cfg['key_point']])
     if 'notime' not in cfg or cfg['notime'] in [False, 'False', 'false', None, 'none', 'None']:
@@ -179,7 +185,7 @@ def get_cfg(args):
     res_out = os.path.realpath(res_out)
     if os.path.exists(res_out):
         tcount = 1
-        while os.path.exists(res_out+'+'+str(tcount)):
+        while os.path.exists(res_out + '+' + str(tcount)):
             tcount += 1
         res_out += '+' + str(tcount)
 

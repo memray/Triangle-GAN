@@ -1,18 +1,12 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
-import tensorflow as tf
-import tensorlayer as tl
-from . import iterate
-import numpy as np
-import time
-import math
-
-
-import pymongo
-import gridfs
 import pickle
-from pymongo import MongoClient
+import time
 from datetime import datetime
+
+import gridfs
+from pymongo import MongoClient
+
 
 class TensorDB(object):
     """TensorDB is a MongoDB based manager that help you to manage data, model and logging.
@@ -47,13 +41,14 @@ class TensorDB(object):
     1 : You may like to install MongoChef or Mongo Management Studo APP for
        visualizing or testing your MongoDB.
     """
+
     def __init__(
-        self,
-        ip = 'localhost',
-        port = 27017,
-        db_name = 'db_name',
-        user_name = None,
-        password = 'password',
+            self,
+            ip='localhost',
+            port=27017,
+            db_name='db_name',
+            user_name=None,
+            password='password',
     ):
         ## connect mongodb
         client = MongoClient(ip, port)
@@ -151,7 +146,7 @@ class TensorDB(object):
     # def del_model(self):
     #     pass
 
-    def save_params(self, params=[], args={}):#, file_name='parameters'):
+    def save_params(self, params=[], args={}):  # , file_name='parameters'):
         """ Save parameters into MongoDB Buckets, and save the file ID into Params Collections.
 
         Parameters
@@ -164,11 +159,11 @@ class TensorDB(object):
         f_id : the Buckets ID of the parameters.
         """
         s = time.time()
-        f_id = self.paramsfs.put(pickle.dumps(params, protocol=2))#, file_name=file_name)
+        f_id = self.paramsfs.put(pickle.dumps(params, protocol=2))  # , file_name=file_name)
         args.update({'f_id': f_id, 'time': datetime.utcnow()})
         self.db.Params.insert_one(args)
         # print("[TensorDB] Save params: {} SUCCESS, took: {}s".format(file_name, round(time.time()-s, 2)))
-        print("[TensorDB] Save params: SUCCESS, took: {}s".format(round(time.time()-s, 2)))
+        print("[TensorDB] Save params: SUCCESS, took: {}s".format(round(time.time() - s, 2)))
         return f_id
 
     def find_one_params(self, args={}):
@@ -193,7 +188,7 @@ class TensorDB(object):
             return False, False
         try:
             params = pickle.loads(self.paramsfs.get(f_id).read())
-            print("[TensorDB] Find one params SUCCESS, {} took: {}s".format(args, round(time.time()-s, 2)))
+            print("[TensorDB] Find one params SUCCESS, {} took: {}s".format(args, round(time.time() - s, 2)))
             return params, f_id
         except:
             return False, False
@@ -215,14 +210,14 @@ class TensorDB(object):
         if pc is not None:
             f_id_list = pc.distinct('f_id')
             params = []
-            for f_id in f_id_list: # you may have multiple Buckets files
+            for f_id in f_id_list:  # you may have multiple Buckets files
                 tmp = self.paramsfs.get(f_id).read()
                 params.append(pickle.loads(tmp))
         else:
             print("[TensorDB] FAIL! Cannot find any: {}".format(args))
             return False
 
-        print("[TensorDB] Find all params SUCCESS, took: {}s".format(round(time.time()-s, 2)))
+        print("[TensorDB] Find all params SUCCESS, took: {}s".format(round(time.time() - s, 2)))
         return params
 
     def del_params(self, args={}):
@@ -247,7 +242,7 @@ class TensorDB(object):
         string = ''
         for key, value in args.items():
             if key is not '_id':
-                string += str(key) + ": "+ str(value) + " / "
+                string += str(key) + ": " + str(value) + " / "
         return string
 
     def save_job(self, script=None, args={}):
@@ -310,7 +305,7 @@ class TensorDB(object):
         """
         _result = self.db.TrainLog.insert_one(args)
         _log = self._print_dict(args)
-        print("[TensorDB] TrainLog: " +_log)
+        print("[TensorDB] TrainLog: " + _log)
         return _result
 
     def del_train_log(self, args={}):
@@ -337,7 +332,7 @@ class TensorDB(object):
         _result = self.db.ValidLog.insert_one(args)
         # _log = "".join(str(key) + ": " + str(value) for key, value in args.items())
         _log = self._print_dict(args)
-        print("[TensorDB] ValidLog: " +_log)
+        print("[TensorDB] ValidLog: " + _log)
         return _result
 
     def del_valid_log(self, args={}):
@@ -364,7 +359,7 @@ class TensorDB(object):
         _result = self.db.TestLog.insert_one(args)
         # _log = "".join(str(key) + str(value) for key, value in args.items())
         _log = self._print_dict(args)
-        print("[TensorDB] TestLog: " +_log)
+        print("[TensorDB] TestLog: " + _log)
         return _result
 
     def del_test_log(self, args={}):
@@ -383,11 +378,7 @@ class TensorDB(object):
         return _t
 
 
-
-
-
 if __name__ == '__main__':
-
     db = TensorDB(ip='localhost', port=27017, db_name='mnist', user_name=None, password=None)
 
     db.save_job('your_script.py', {'job_id': 1, 'learning_rate': 0.01, 'n_units': 100})
@@ -395,7 +386,6 @@ if __name__ == '__main__':
 
     print(temp['learning_rate'])
 
-    import _your_script
     print("import _your_script SUCCESS")
 
 

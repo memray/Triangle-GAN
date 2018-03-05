@@ -1,8 +1,6 @@
-import numpy as np
-import theano as th
-import theano.tensor as T
 import lasagne
-from lasagne.layers import dnn
+import theano.tensor as T
+
 
 # code from ImprovedGAN, Salimans and Goodfellow: https://github.com/openai/improved-gan
 
@@ -24,7 +22,8 @@ class Deconv2DLayer(lasagne.layers.Layer):
             self.b = None
 
     def get_output_for(self, input, **kwargs):
-        op = T.nnet.abstract_conv.AbstractConv2d_gradInputs(imshp=self.target_shape, kshp=self.W_shape, subsample=self.stride, border_mode='half')
+        op = T.nnet.abstract_conv.AbstractConv2d_gradInputs(imshp=self.target_shape, kshp=self.W_shape,
+                                                            subsample=self.stride, border_mode='half')
         activation = op(self.W, input, self.target_shape[2:])
 
         if self.b is not None:

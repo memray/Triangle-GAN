@@ -1,12 +1,13 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
+import random
+import time
+
+import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
+
 from . import iterate
-import numpy as np
-import time
-import math
-import random
 
 
 def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_size=100,
@@ -75,22 +76,22 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
     """
     assert X_train.shape[0] >= batch_size, "Number of training examples should be bigger than the batch size"
 
-    if(tensorboard):
+    if (tensorboard):
         print("Setting up tensorboard ...")
-        #Set up tensorboard summaries and saver
+        # Set up tensorboard summaries and saver
         tl.files.exists_or_mkdir('logs/')
 
-        #Only write summaries for more recent TensorFlow versions
+        # Only write summaries for more recent TensorFlow versions
         if hasattr(tf, 'summary') and hasattr(tf.summary, 'FileWriter'):
             if tensorboard_graph_vis:
-                train_writer = tf.summary.FileWriter('logs/train',sess.graph)
-                val_writer = tf.summary.FileWriter('logs/validation',sess.graph)
+                train_writer = tf.summary.FileWriter('logs/train', sess.graph)
+                val_writer = tf.summary.FileWriter('logs/validation', sess.graph)
             else:
                 train_writer = tf.summary.FileWriter('logs/train')
                 val_writer = tf.summary.FileWriter('logs/validation')
 
-        #Set up summary nodes
-        if(tensorboard_weight_histograms):
+        # Set up summary nodes
+        if (tensorboard_weight_histograms):
             for param in network.all_params:
                 if hasattr(tf, 'summary') and hasattr(tf.summary, 'histogram'):
                     print('Param name ', param.name)
@@ -101,7 +102,7 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
 
         merged = tf.summary.merge_all()
 
-        #Initalize all variables and summaries
+        # Initalize all variables and summaries
         tl.layers.initialize_global_variables(sess)
         print("Finished! use $tensorboard --logdir=logs/ to start server")
 
@@ -110,21 +111,22 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
     tensorboard_train_index, tensorboard_val_index = 0, 0
     for epoch in range(n_epoch):
         start_time = time.time()
-        loss_ep = 0; n_step = 0
+        loss_ep = 0;
+        n_step = 0
         for X_train_a, y_train_a in iterate.minibatches(X_train, y_train,
-                                                    batch_size, shuffle=True):
+                                                        batch_size, shuffle=True):
             feed_dict = {x: X_train_a, y_: y_train_a}
-            feed_dict.update( network.all_drop )    # enable noise layers
+            feed_dict.update(network.all_drop)  # enable noise layers
             loss, _ = sess.run([cost, train_op], feed_dict=feed_dict)
             loss_ep += loss
             n_step += 1
-        loss_ep = loss_ep/ n_step
+        loss_ep = loss_ep / n_step
 
         if tensorboard and hasattr(tf, 'summary'):
-            if epoch+1 == 1 or (epoch+1) % tensorboard_epoch_freq == 0:
+            if epoch + 1 == 1 or (epoch + 1) % tensorboard_epoch_freq == 0:
                 for X_train_a, y_train_a in iterate.minibatches(
-                                        X_train, y_train, batch_size, shuffle=True):
-                    dp_dict = dict_to_one( network.all_drop )    # disable noise layers
+                        X_train, y_train, batch_size, shuffle=True):
+                    dp_dict = dict_to_one(network.all_drop)  # disable noise layers
                     feed_dict = {x: X_train_a, y_: y_train_a}
                     feed_dict.update(dp_dict)
                     result = sess.run(merged, feed_dict=feed_dict)
@@ -132,8 +134,8 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
                     tensorboard_train_index += 1
 
                 for X_val_a, y_val_a in iterate.minibatches(
-                                        X_val, y_val, batch_size, shuffle=True):
-                    dp_dict = dict_to_one( network.all_drop )    # disable noise layers
+                        X_val, y_val, batch_size, shuffle=True):
+                    dp_dict = dict_to_one(network.all_drop)  # disable noise layers
                     feed_dict = {x: X_val_a, y_: y_val_a}
                     feed_dict.update(dp_dict)
                     result = sess.run(merged, feed_dict=feed_dict)
@@ -146,8 +148,8 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
                 if eval_train is True:
                     train_loss, train_acc, n_batch = 0, 0, 0
                     for X_train_a, y_train_a in iterate.minibatches(
-                                            X_train, y_train, batch_size, shuffle=True):
-                        dp_dict = dict_to_one( network.all_drop )    # disable noise layers
+                            X_train, y_train, batch_size, shuffle=True):
+                        dp_dict = dict_to_one(network.all_drop)  # disable noise layers
                         feed_dict = {x: X_train_a, y_: y_train_a}
                         feed_dict.update(dp_dict)
                         if acc is not None:
@@ -155,14 +157,15 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
                             train_acc += ac
                         else:
                             err = sess.run(cost, feed_dict=feed_dict)
-                        train_loss += err;  n_batch += 1
-                    print("   train loss: %f" % (train_loss/ n_batch))
+                        train_loss += err;
+                        n_batch += 1
+                    print("   train loss: %f" % (train_loss / n_batch))
                     if acc is not None:
-                        print("   train acc: %f" % (train_acc/ n_batch))
+                        print("   train acc: %f" % (train_acc / n_batch))
                 val_loss, val_acc, n_batch = 0, 0, 0
                 for X_val_a, y_val_a in iterate.minibatches(
-                                            X_val, y_val, batch_size, shuffle=True):
-                    dp_dict = dict_to_one( network.all_drop )    # disable noise layers
+                        X_val, y_val, batch_size, shuffle=True):
+                    dp_dict = dict_to_one(network.all_drop)  # disable noise layers
                     feed_dict = {x: X_val_a, y_: y_val_a}
                     feed_dict.update(dp_dict)
                     if acc is not None:
@@ -170,10 +173,11 @@ def fit(sess, network, train_op, cost, X_train, y_train, x, y_, acc=None, batch_
                         val_acc += ac
                     else:
                         err = sess.run(cost, feed_dict=feed_dict)
-                    val_loss += err; n_batch += 1
-                print("   val loss: %f" % (val_loss/ n_batch))
+                    val_loss += err;
+                    n_batch += 1
+                print("   val loss: %f" % (val_loss / n_batch))
                 if acc is not None:
-                    print("   val acc: %f" % (val_acc/ n_batch))
+                    print("   val acc: %f" % (val_acc / n_batch))
             else:
                 print("Epoch %d of %d took %fs, loss %f" % (epoch + 1, n_epoch, time.time() - start_time, loss_ep))
     print("Total training time: %fs" % (time.time() - start_time_begin))
@@ -212,19 +216,19 @@ def test(sess, network, acc, X_test, y_test, x, y_, batch_size, cost=None):
     """
     print('Start testing the network ...')
     if batch_size is None:
-        dp_dict = dict_to_one( network.all_drop )
+        dp_dict = dict_to_one(network.all_drop)
         feed_dict = {x: X_test, y_: y_test}
         feed_dict.update(dp_dict)
         if cost is not None:
             print("   test loss: %f" % sess.run(cost, feed_dict=feed_dict))
         print("   test acc: %f" % sess.run(acc, feed_dict=feed_dict))
-            # print("   test acc: %f" % np.mean(y_test == sess.run(y_op,
-            #                                           feed_dict=feed_dict)))
+        # print("   test acc: %f" % np.mean(y_test == sess.run(y_op,
+        #                                           feed_dict=feed_dict)))
     else:
         test_loss, test_acc, n_batch = 0, 0, 0
         for X_test_a, y_test_a in iterate.minibatches(
-                                    X_test, y_test, batch_size, shuffle=True):
-            dp_dict = dict_to_one( network.all_drop )    # disable noise layers
+                X_test, y_test, batch_size, shuffle=True):
+            dp_dict = dict_to_one(network.all_drop)  # disable noise layers
             feed_dict = {x: X_test_a, y_: y_test_a}
             feed_dict.update(dp_dict)
             if cost is not None:
@@ -232,10 +236,11 @@ def test(sess, network, acc, X_test, y_test, x, y_, batch_size, cost=None):
                 test_loss += err
             else:
                 ac = sess.run(acc, feed_dict=feed_dict)
-            test_acc += ac; n_batch += 1
+            test_acc += ac;
+            n_batch += 1
         if cost is not None:
-            print("   test loss: %f" % (test_loss/ n_batch))
-        print("   test acc: %f" % (test_acc/ n_batch))
+            print("   test loss: %f" % (test_loss / n_batch))
+        print("   test acc: %f" % (test_acc / n_batch))
 
 
 def predict(sess, network, X, x, y_op):
@@ -262,10 +267,11 @@ def predict(sess, network, X, x, y_op):
     >>> y_op = tf.argmax(tf.nn.softmax(y), 1)
     >>> print(tl.utils.predict(sess, network, X_test, x, y_op))
     """
-    dp_dict = dict_to_one( network.all_drop )    # disable noise layers
-    feed_dict = {x: X,}
+    dp_dict = dict_to_one(network.all_drop)  # disable noise layers
+    feed_dict = {x: X, }
     feed_dict.update(dp_dict)
     return sess.run(y_op, feed_dict=feed_dict)
+
 
 ## Evaluation
 def evaluation(y_test=None, y_predict=None, n_classes=None):
@@ -288,15 +294,16 @@ def evaluation(y_test=None, y_predict=None, n_classes=None):
     >>> c_mat, f1, acc, f1_macro = evaluation(y_test, y_predict, n_classes)
     """
     from sklearn.metrics import confusion_matrix, f1_score, accuracy_score
-    c_mat = confusion_matrix(y_test, y_predict, labels = [x for x in range(n_classes)])
-    f1    = f1_score(y_test, y_predict, average = None, labels = [x for x in range(n_classes)])
+    c_mat = confusion_matrix(y_test, y_predict, labels=[x for x in range(n_classes)])
+    f1 = f1_score(y_test, y_predict, average=None, labels=[x for x in range(n_classes)])
     f1_macro = f1_score(y_test, y_predict, average='macro')
-    acc   = accuracy_score(y_test, y_predict)
-    print('confusion matrix: \n',c_mat)
-    print('f1-score:',f1)
-    print('f1-score(macro):',f1_macro)   # same output with > f1_score(y_true, y_pred, average='macro')
+    acc = accuracy_score(y_test, y_predict)
+    print('confusion matrix: \n', c_mat)
+    print('f1-score:', f1)
+    print('f1-score(macro):', f1_macro)  # same output with > f1_score(y_true, y_pred, average='macro')
     print('accuracy-score:', acc)
     return c_mat, f1, acc, f1_macro
+
 
 def dict_to_one(dp_dict={}):
     """
@@ -316,7 +323,8 @@ def dict_to_one(dp_dict={}):
     """
     return {x: 1 for x in dp_dict}
 
-def flatten_list(list_of_list=[[],[]]):
+
+def flatten_list(list_of_list=[[], []]):
     """
     Input a list of list, return a list that all items are in a list.
 
@@ -368,9 +376,9 @@ def class_balancing_oversample(X_train=None, y_train=None, printable=True):
     locations = {}
     number = {}
 
-    for lab, num in c.most_common():    # find the index from y_train
+    for lab, num in c.most_common():  # find the index from y_train
         number[lab] = num
-        locations[lab] = np.where(np.array(y_train)==lab)[0]
+        locations[lab] = np.where(np.array(y_train) == lab)[0]
     if printable:
         print('convert list(np.array) to dict format')
     X = {}  # convert list to dict
@@ -394,16 +402,16 @@ def class_balancing_oversample(X_train=None, y_train=None, printable=True):
     if printable:
         print('make each stage have same num of instances')
     for key in X:
-        X[key] = X[key][0:most_num,:]
+        X[key] = X[key][0:most_num, :]
         print(key, len(X[key]))
 
     # convert dict to list
     if printable:
         print('convert from dict to list format')
     y_train = []
-    X_train = np.empty(shape=(0,len(X[0][0])))
+    X_train = np.empty(shape=(0, len(X[0][0])))
     for key in X:
-        X_train = np.vstack( (X_train, X[key] ) )
+        X_train = np.vstack((X_train, X[key]))
         y_train.extend([key for i in range(len(X[key]))])
     # print(len(X_train), len(y_train))
     c = Counter(y_train)
@@ -411,6 +419,7 @@ def class_balancing_oversample(X_train=None, y_train=None, printable=True):
         print('the occurrence number of each stage after oversampling: %s' % c.most_common())
     # ================ End of Classes balancing
     return X_train, y_train
+
 
 ## Random
 def get_random_int(min=0, max=10, number=5, seed=None):
@@ -425,7 +434,7 @@ def get_random_int(min=0, max=10, number=5, seed=None):
     if seed:
         rnd = random.Random(seed)
     # return [random.randint(min,max) for p in range(0, number)]
-    return [rnd.randint(min,max) for p in range(0, number)]
+    return [rnd.randint(min, max) for p in range(0, number)]
 
 #
 # def class_balancing_sequence_4D(X_train, y_train, sequence_length, model='downsampling' ,printable=True):

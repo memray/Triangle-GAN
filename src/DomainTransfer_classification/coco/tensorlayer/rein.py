@@ -3,9 +3,10 @@
 
 
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from six.moves import xrange
+
 
 def discount_episode_rewards(rewards=[], gamma=0.99, mode=0):
     """ Take 1D float array of rewards and compute discounted rewards for an
@@ -72,14 +73,14 @@ def cross_entropy_reward_loss(logits, actions, rewards, name=None):
     >>> train_op = tf.train.RMSPropOptimizer(learning_rate, decay_rate).minimize(loss)
     """
 
-    try: # TF 1.0
+    try:  # TF 1.0
         cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=actions, logits=logits, name=name)
     except:
         cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, targets=actions)
         # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits, actions)
 
-    try: ## TF1.0
+    try:  ## TF1.0
         loss = tf.reduce_sum(tf.multiply(cross_entropy, rewards))
-    except: ## TF0.12
-        loss = tf.reduce_sum(tf.mul(cross_entropy, rewards))   # element-wise mul
+    except:  ## TF0.12
+        loss = tf.reduce_sum(tf.mul(cross_entropy, rewards))  # element-wise mul
     return loss

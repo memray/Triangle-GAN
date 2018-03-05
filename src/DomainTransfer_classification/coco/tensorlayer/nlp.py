@@ -4,16 +4,17 @@
 
 
 
-import tensorflow as tf
-import os
-from sys import platform as _platform
 import collections
+import os
 import random
-import numpy as np
+import re
 import warnings
+
+import numpy as np
+import tensorflow as tf
 from six.moves import xrange
 from tensorflow.python.platform import gfile
-import re
+
 
 ## Iteration functions
 def generate_skip_gram_batch(data, batch_size, num_skips, skip_window, data_index=0):
@@ -72,14 +73,14 @@ def generate_skip_gram_batch(data, batch_size, num_skips, skip_window, data_inde
     assert num_skips <= 2 * skip_window
     batch = np.ndarray(shape=(batch_size), dtype=np.int32)
     labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
-    span = 2 * skip_window + 1 # [ skip_window target skip_window ]
+    span = 2 * skip_window + 1  # [ skip_window target skip_window ]
     buffer = collections.deque(maxlen=span)
     for _ in range(span):
         buffer.append(data[data_index])
         data_index = (data_index + 1) % len(data)
     for i in range(batch_size // num_skips):
         target = skip_window  # target label at the center of the buffer
-        targets_to_avoid = [ skip_window ]
+        targets_to_avoid = [skip_window]
         for j in range(num_skips):
             while target in targets_to_avoid:
                 target = random.randint(0, span - 1)
@@ -138,6 +139,7 @@ def sample(a=[], temperature=1.0):
         # print(b)
         return np.argmax(np.random.multinomial(1, b, 1))
 
+
 def sample_top(a=[], top_k=10):
     """Sample from ``top_k`` probabilities.
 
@@ -168,115 +170,116 @@ def sample_top(a=[], top_k=10):
 
 ## Vector representations of words (Advanced)  UNDOCUMENT
 class SimpleVocabulary(object):
-  """Simple vocabulary wrapper, see create_vocab().
+    """Simple vocabulary wrapper, see create_vocab().
 
-  Parameters
-  ------------
-  vocab : A dictionary of word to word_id.
-  unk_id : Id of the special 'unknown' word.
-  """
+    Parameters
+    ------------
+    vocab : A dictionary of word to word_id.
+    unk_id : Id of the special 'unknown' word.
+    """
 
-  def __init__(self, vocab, unk_id):
-    """Initializes the vocabulary."""
+    def __init__(self, vocab, unk_id):
+        """Initializes the vocabulary."""
 
+        self._vocab = vocab
+        self._unk_id = unk_id
 
-    self._vocab = vocab
-    self._unk_id = unk_id
+    def word_to_id(self, word):
+        """Returns the integer id of a word string."""
+        if word in self._vocab:
+            return self._vocab[word]
+        else:
+            return self._unk_id
 
-  def word_to_id(self, word):
-    """Returns the integer id of a word string."""
-    if word in self._vocab:
-      return self._vocab[word]
-    else:
-      return self._unk_id
 
 class Vocabulary(object):
-  """Create Vocabulary class from a given vocabulary and its id-word, word-id convert,
-  see create_vocab() and ``tutorial_tfrecord3.py``.
+    """Create Vocabulary class from a given vocabulary and its id-word, word-id convert,
+    see create_vocab() and ``tutorial_tfrecord3.py``.
 
-  Parameters
-  -----------
-  vocab_file : File containing the vocabulary, where the words are the first
-        whitespace-separated token on each line (other tokens are ignored) and
-        the word ids are the corresponding line numbers.
-  start_word : Special word denoting sentence start.
-  end_word : Special word denoting sentence end.
-  unk_word : Special word denoting unknown words.
+    Parameters
+    -----------
+    vocab_file : File containing the vocabulary, where the words are the first
+          whitespace-separated token on each line (other tokens are ignored) and
+          the word ids are the corresponding line numbers.
+    start_word : Special word denoting sentence start.
+    end_word : Special word denoting sentence end.
+    unk_word : Special word denoting unknown words.
 
-  Properties
-  ------------
-  vocab : a dictionary from word to id.
-  reverse_vocab : a list from id to word.
-  start_id : int of start id
-  end_id : int of end id
-  unk_id : int of unk id
-  pad_id : int of padding id
+    Properties
+    ------------
+    vocab : a dictionary from word to id.
+    reverse_vocab : a list from id to word.
+    start_id : int of start id
+    end_id : int of end id
+    unk_id : int of unk id
+    pad_id : int of padding id
 
-  Vocab_files
-  -------------
-  >>> Look as follow, includes `start_word` , `end_word` but no `unk_word` .
-  >>> a 969108
-  >>> <S> 586368
-  >>> </S> 586368
-  >>> . 440479
-  >>> on 213612
-  >>> of 202290
-  >>> the 196219
-  >>> in 182598
-  >>> with 152984
-  >>> and 139109
-  >>> is 97322
-  """
+    Vocab_files
+    -------------
+    >>> Look as follow, includes `start_word` , `end_word` but no `unk_word` .
+    >>> a 969108
+    >>> <S> 586368
+    >>> </S> 586368
+    >>> . 440479
+    >>> on 213612
+    >>> of 202290
+    >>> the 196219
+    >>> in 182598
+    >>> with 152984
+    >>> and 139109
+    >>> is 97322
+    """
 
-  def __init__(self,
-               vocab_file,
-               start_word="<S>",
-               end_word="</S>",
-               unk_word="<UNK>",
-               pad_word="<PAD>"):
-    if not tf.gfile.Exists(vocab_file):
-      tf.logging.fatal("Vocab file %s not found.", vocab_file)
-    tf.logging.info("Initializing vocabulary from file: %s", vocab_file)
+    def __init__(self,
+                 vocab_file,
+                 start_word="<S>",
+                 end_word="</S>",
+                 unk_word="<UNK>",
+                 pad_word="<PAD>"):
+        if not tf.gfile.Exists(vocab_file):
+            tf.logging.fatal("Vocab file %s not found.", vocab_file)
+        tf.logging.info("Initializing vocabulary from file: %s", vocab_file)
 
-    with tf.gfile.GFile(vocab_file, mode="r") as f:
-      reverse_vocab = list(f.readlines())
-    reverse_vocab = [line.split()[0] for line in reverse_vocab]
-    assert start_word in reverse_vocab
-    assert end_word in reverse_vocab
-    if unk_word not in reverse_vocab:
-      reverse_vocab.append(unk_word)
-    vocab = dict([(x, y) for (y, x) in enumerate(reverse_vocab)])
+        with tf.gfile.GFile(vocab_file, mode="r") as f:
+            reverse_vocab = list(f.readlines())
+        reverse_vocab = [line.split()[0] for line in reverse_vocab]
+        assert start_word in reverse_vocab
+        assert end_word in reverse_vocab
+        if unk_word not in reverse_vocab:
+            reverse_vocab.append(unk_word)
+        vocab = dict([(x, y) for (y, x) in enumerate(reverse_vocab)])
 
-    print("  [TL] Vocabulary from %s : %s %s %s" % (vocab_file, start_word, end_word, unk_word))
-    print("    vocabulary with %d words (includes start_word, end_word, unk_word)" % len(vocab))
-    # tf.logging.info("     vocabulary with %d words" % len(vocab))
+        print("  [TL] Vocabulary from %s : %s %s %s" % (vocab_file, start_word, end_word, unk_word))
+        print("    vocabulary with %d words (includes start_word, end_word, unk_word)" % len(vocab))
+        # tf.logging.info("     vocabulary with %d words" % len(vocab))
 
-    self.vocab = vocab  # vocab[word] = id
-    self.reverse_vocab = reverse_vocab  # reverse_vocab[id] = word
+        self.vocab = vocab  # vocab[word] = id
+        self.reverse_vocab = reverse_vocab  # reverse_vocab[id] = word
 
-    # Save special word ids.
-    self.start_id = vocab[start_word]
-    self.end_id = vocab[end_word]
-    self.unk_id = vocab[unk_word]
-    self.pad_id = vocab[pad_word]
-    print("      start_id: %d" % self.start_id)
-    print("      end_id: %d" % self.end_id)
-    print("      unk_id: %d" % self.unk_id)
-    print("      pad_id: %d" % self.pad_id)
+        # Save special word ids.
+        self.start_id = vocab[start_word]
+        self.end_id = vocab[end_word]
+        self.unk_id = vocab[unk_word]
+        self.pad_id = vocab[pad_word]
+        print("      start_id: %d" % self.start_id)
+        print("      end_id: %d" % self.end_id)
+        print("      unk_id: %d" % self.unk_id)
+        print("      pad_id: %d" % self.pad_id)
 
-  def word_to_id(self, word):
-    """Returns the integer word id of a word string."""
-    if word in self.vocab:
-      return self.vocab[word]
-    else:
-      return self.unk_id
+    def word_to_id(self, word):
+        """Returns the integer word id of a word string."""
+        if word in self.vocab:
+            return self.vocab[word]
+        else:
+            return self.unk_id
 
-  def id_to_word(self, word_id):
-    """Returns the word string of an integer word id."""
-    if word_id >= len(self.reverse_vocab):
-      return self.reverse_vocab[self.unk_id]
-    else:
-      return self.reverse_vocab[word_id]
+    def id_to_word(self, word_id):
+        """Returns the word string of an integer word id."""
+        if word_id >= len(self.reverse_vocab):
+            return self.reverse_vocab[self.unk_id]
+        else:
+            return self.reverse_vocab[word_id]
+
 
 def process_sentence(sentence, start_word="<S>", end_word="</S>"):
     """Converts a sentence string into a list of string words, add start_word and end_word,
@@ -311,6 +314,7 @@ def process_sentence(sentence, start_word="<S>", end_word="</S>"):
     if end_word is not None:
         process_sentence.append(end_word)
     return process_sentence
+
 
 def create_vocab(sentences, word_counts_output_file, min_word_count=1):
     """Creates the vocabulary of word to word_id, see create_vocab() and ``tutorial_tfrecord3.py``.
@@ -364,7 +368,7 @@ def create_vocab(sentences, word_counts_output_file, min_word_count=1):
     # Filter uncommon words and sort by descending count.
     word_counts = [x for x in counter.items() if x[1] >= min_word_count]
     word_counts.sort(key=lambda x: x[1], reverse=True)
-    word_counts = [("<PAD>", 0)] + word_counts # 1st id should be reserved for padding
+    word_counts = [("<PAD>", 0)] + word_counts  # 1st id should be reserved for padding
     # print(word_counts)
     print("    Words in vocabulary: %d" % len(word_counts))
 
@@ -399,7 +403,8 @@ def simple_read_words(filename="nietzsche.txt"):
         words = f.read()
         return words
 
-def read_words(filename="nietzsche.txt", replace = ['\n', '<eos>']):
+
+def read_words(filename="nietzsche.txt", replace=['\n', '<eos>']):
     """File to list format context. Note that, this script can not handle punctuations.
     For customized read_words method, see ``tutorial_generate_text.py``.
 
@@ -420,13 +425,14 @@ def read_words(filename="nietzsche.txt", replace = ['\n', '<eos>']):
     - `tensorflow.models.rnn.ptb.reader <https://github.com/tensorflow/tensorflow/tree/master/tensorflow/models/rnn/ptb>`_
     """
     with tf.gfile.GFile(filename, "r") as f:
-        try:    # python 3.4 or older
+        try:  # python 3.4 or older
             context_list = f.read().replace(*replace).split()
-        except: # python 3.5
+        except:  # python 3.5
             f.seek(0)
             replace = [x.encode('utf-8') for x in replace]
             context_list = f.read().replace(*replace).split()
         return context_list
+
 
 def read_analogies_file(eval_file='questions-words.txt', word2id={}):
     """Reads through an analogy question file, return its id format.
@@ -476,20 +482,21 @@ def read_analogies_file(eval_file='questions-words.txt', word2id={}):
     questions = []
     questions_skipped = 0
     with open(eval_file, "rb") as analogy_f:
-      for line in analogy_f:
-          if line.startswith(b":"):  # Skip comments.
+        for line in analogy_f:
+            if line.startswith(b":"):  # Skip comments.
                 continue
-          words = line.strip().lower().split(b" ")  # lowercase
-          ids = [word2id.get(w.strip()) for w in words]
-          if None in ids or len(ids) != 4:
-              questions_skipped += 1
-          else:
-              questions.append(np.array(ids))
+            words = line.strip().lower().split(b" ")  # lowercase
+            ids = [word2id.get(w.strip()) for w in words]
+            if None in ids or len(ids) != 4:
+                questions_skipped += 1
+            else:
+                questions.append(np.array(ids))
     print("Eval analogy file: ", eval_file)
     print("Questions: ", len(questions))
     print("Skipped: ", questions_skipped)
     analogy_questions = np.array(questions, dtype=np.int32)
     return analogy_questions
+
 
 def build_vocab(data):
     """Build vocabulary.
@@ -528,6 +535,7 @@ def build_vocab(data):
     # print(word_to_id) # dictionary for word to id, e.g. 'campbell': 2587, 'atlantic': 2247, 'aoun': 6746
     return word_to_id
 
+
 def build_reverse_dictionary(word_to_id):
     """Given a dictionary for converting word to integer id.
     Returns a reverse dictionary for converting a id to word.
@@ -545,7 +553,8 @@ def build_reverse_dictionary(word_to_id):
     reverse_dictionary = dict(zip(word_to_id.values(), word_to_id.keys()))
     return reverse_dictionary
 
-def build_words_dataset(words=[], vocabulary_size=50000, printable=True, unk_key = 'UNK'):
+
+def build_words_dataset(words=[], vocabulary_size=50000, printable=True, unk_key='UNK'):
     """Build the words dictionary and replace rare words with 'UNK' token.
     The most common word has the smallest integer id.
 
@@ -605,11 +614,12 @@ def build_words_dataset(words=[], vocabulary_size=50000, printable=True, unk_key
     if printable:
         print('Real vocabulary size    %d' % len(collections.Counter(words).keys()))
         print('Limited vocabulary size {}'.format(vocabulary_size))
-    assert len(collections.Counter(words).keys()) >= vocabulary_size , \
-            "the limited vocabulary_size must be less than or equal to the read vocabulary_size"
+    assert len(collections.Counter(words).keys()) >= vocabulary_size, \
+        "the limited vocabulary_size must be less than or equal to the read vocabulary_size"
     return data, count, dictionary, reverse_dictionary
 
-def words_to_word_ids(data=[], word_to_id={}, unk_key = 'UNK'):
+
+def words_to_word_ids(data=[], word_to_id={}, unk_key='UNK'):
     """Given a context (words) in list format and the vocabulary,
     Returns a list of IDs to represent the context.
 
@@ -669,6 +679,7 @@ def words_to_word_ids(data=[], word_to_id={}, unk_key = 'UNK'):
     #     # print(data[0])
     #     return [word_to_id[str(word)] f
 
+
 def word_ids_to_words(data, id_to_word):
     """Given a context (ids) in list format and the vocabulary,
     Returns a list of words to represent the context.
@@ -689,6 +700,7 @@ def word_ids_to_words(data, id_to_word):
     >>> see words_to_word_ids
     """
     return [id_to_word[i] for i in data]
+
 
 def save_vocab(count=[], name='vocab.txt'):
     """Save the vocabulary to a file so the model can be reloaded.
@@ -724,209 +736,214 @@ def save_vocab(count=[], name='vocab.txt'):
             f.write("%s %d\n" % (tf.compat.as_text(count[i][0]), count[i][1]))
     print("%d vocab saved to %s in %s" % (vocabulary_size, name, pwd))
 
+
 ## Functions for translation
 def basic_tokenizer(sentence, _WORD_SPLIT=re.compile(b"([.,!?\"':;)(])")):
-  """Very basic tokenizer: split the sentence into a list of tokens.
+    """Very basic tokenizer: split the sentence into a list of tokens.
 
-  Parameters
-  -----------
-  sentence : tensorflow.python.platform.gfile.GFile Object
-  _WORD_SPLIT : regular expression for word spliting.
+    Parameters
+    -----------
+    sentence : tensorflow.python.platform.gfile.GFile Object
+    _WORD_SPLIT : regular expression for word spliting.
 
 
-  Examples
-  --------
-  >>> see create_vocabulary
-  >>> from tensorflow.python.platform import gfile
-  >>> train_path = "wmt/giga-fren.release2"
-  >>> with gfile.GFile(train_path + ".en", mode="rb") as f:
-  >>>    for line in f:
-  >>>       tokens = tl.nlp.basic_tokenizer(line)
-  >>>       print(tokens)
-  >>>       exit()
-  ... [b'Changing', b'Lives', b'|', b'Changing', b'Society', b'|', b'How',
-  ...   b'It', b'Works', b'|', b'Technology', b'Drives', b'Change', b'Home',
-  ...   b'|', b'Concepts', b'|', b'Teachers', b'|', b'Search', b'|', b'Overview',
-  ...   b'|', b'Credits', b'|', b'HHCC', b'Web', b'|', b'Reference', b'|',
-  ...   b'Feedback', b'Virtual', b'Museum', b'of', b'Canada', b'Home', b'Page']
+    Examples
+    --------
+    >>> see create_vocabulary
+    >>> from tensorflow.python.platform import gfile
+    >>> train_path = "wmt/giga-fren.release2"
+    >>> with gfile.GFile(train_path + ".en", mode="rb") as f:
+    >>>    for line in f:
+    >>>       tokens = tl.nlp.basic_tokenizer(line)
+    >>>       print(tokens)
+    >>>       exit()
+    ... [b'Changing', b'Lives', b'|', b'Changing', b'Society', b'|', b'How',
+    ...   b'It', b'Works', b'|', b'Technology', b'Drives', b'Change', b'Home',
+    ...   b'|', b'Concepts', b'|', b'Teachers', b'|', b'Search', b'|', b'Overview',
+    ...   b'|', b'Credits', b'|', b'HHCC', b'Web', b'|', b'Reference', b'|',
+    ...   b'Feedback', b'Virtual', b'Museum', b'of', b'Canada', b'Home', b'Page']
 
-  References
-  ----------
-  - Code from ``/tensorflow/models/rnn/translation/data_utils.py``
-  """
-  words = []
-  sentence = tf.compat.as_bytes(sentence)
-  for space_separated_fragment in sentence.strip().split():
-    words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
-  return [w for w in words if w]
+    References
+    ----------
+    - Code from ``/tensorflow/models/rnn/translation/data_utils.py``
+    """
+    words = []
+    sentence = tf.compat.as_bytes(sentence)
+    for space_separated_fragment in sentence.strip().split():
+        words.extend(re.split(_WORD_SPLIT, space_separated_fragment))
+    return [w for w in words if w]
+
 
 def create_vocabulary(vocabulary_path, data_path, max_vocabulary_size,
                       tokenizer=None, normalize_digits=True,
                       _DIGIT_RE=re.compile(br"\d"),
                       _START_VOCAB=[b"_PAD", b"_GO", b"_EOS", b"_UNK"]):
-  """Create vocabulary file (if it does not exist yet) from data file.
+    """Create vocabulary file (if it does not exist yet) from data file.
 
-  Data file is assumed to contain one sentence per line. Each sentence is
-  tokenized and digits are normalized (if normalize_digits is set).
-  Vocabulary contains the most-frequent tokens up to max_vocabulary_size.
-  We write it to vocabulary_path in a one-token-per-line format, so that later
-  token in the first line gets id=0, second line gets id=1, and so on.
+    Data file is assumed to contain one sentence per line. Each sentence is
+    tokenized and digits are normalized (if normalize_digits is set).
+    Vocabulary contains the most-frequent tokens up to max_vocabulary_size.
+    We write it to vocabulary_path in a one-token-per-line format, so that later
+    token in the first line gets id=0, second line gets id=1, and so on.
 
-  Parameters
-  -----------
-  vocabulary_path : path where the vocabulary will be created.
-  data_path : data file that will be used to create vocabulary.
-  max_vocabulary_size : limit on the size of the created vocabulary.
-  tokenizer : a function to use to tokenize each data sentence.
-        if None, basic_tokenizer will be used.
-  normalize_digits : Boolean
-        if true, all digits are replaced by 0s.
+    Parameters
+    -----------
+    vocabulary_path : path where the vocabulary will be created.
+    data_path : data file that will be used to create vocabulary.
+    max_vocabulary_size : limit on the size of the created vocabulary.
+    tokenizer : a function to use to tokenize each data sentence.
+          if None, basic_tokenizer will be used.
+    normalize_digits : Boolean
+          if true, all digits are replaced by 0s.
 
-  References
-  ----------
-  - Code from ``/tensorflow/models/rnn/translation/data_utils.py``
-  """
-  if not gfile.Exists(vocabulary_path):
-    print("Creating vocabulary %s from data %s" % (vocabulary_path, data_path))
-    vocab = {}
-    with gfile.GFile(data_path, mode="rb") as f:
-      counter = 0
-      for line in f:
-        counter += 1
-        if counter % 100000 == 0:
-          print("  processing line %d" % counter)
-        tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
-        for w in tokens:
-          word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
-          if word in vocab:
-            vocab[word] += 1
-          else:
-            vocab[word] = 1
-      vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-      if len(vocab_list) > max_vocabulary_size:
-        vocab_list = vocab_list[:max_vocabulary_size]
-      with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
-        for w in vocab_list:
-          vocab_file.write(w + b"\n")
-  else:
-    print("Vocabulary %s from data %s exists" % (vocabulary_path, data_path))
+    References
+    ----------
+    - Code from ``/tensorflow/models/rnn/translation/data_utils.py``
+    """
+    if not gfile.Exists(vocabulary_path):
+        print("Creating vocabulary %s from data %s" % (vocabulary_path, data_path))
+        vocab = {}
+        with gfile.GFile(data_path, mode="rb") as f:
+            counter = 0
+            for line in f:
+                counter += 1
+                if counter % 100000 == 0:
+                    print("  processing line %d" % counter)
+                tokens = tokenizer(line) if tokenizer else basic_tokenizer(line)
+                for w in tokens:
+                    word = re.sub(_DIGIT_RE, b"0", w) if normalize_digits else w
+                    if word in vocab:
+                        vocab[word] += 1
+                    else:
+                        vocab[word] = 1
+            vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+            if len(vocab_list) > max_vocabulary_size:
+                vocab_list = vocab_list[:max_vocabulary_size]
+            with gfile.GFile(vocabulary_path, mode="wb") as vocab_file:
+                for w in vocab_list:
+                    vocab_file.write(w + b"\n")
+    else:
+        print("Vocabulary %s from data %s exists" % (vocabulary_path, data_path))
+
 
 def initialize_vocabulary(vocabulary_path):
-  """Initialize vocabulary from file, return the word_to_id (dictionary)
-  and id_to_word (list).
+    """Initialize vocabulary from file, return the word_to_id (dictionary)
+    and id_to_word (list).
 
-  We assume the vocabulary is stored one-item-per-line, so a file:\n
-    dog\n
-    cat\n
-  will result in a vocabulary {"dog": 0, "cat": 1}, and this function will
-  also return the reversed-vocabulary ["dog", "cat"].
+    We assume the vocabulary is stored one-item-per-line, so a file:\n
+      dog\n
+      cat\n
+    will result in a vocabulary {"dog": 0, "cat": 1}, and this function will
+    also return the reversed-vocabulary ["dog", "cat"].
 
-  Parameters
-  -----------
-  vocabulary_path : path to the file containing the vocabulary.
+    Parameters
+    -----------
+    vocabulary_path : path to the file containing the vocabulary.
 
-  Returns
-  --------
-  vocab : a dictionary
-        Word to id. A dictionary mapping string to integers.
-  rev_vocab : a list
-        Id to word. The reversed vocabulary (a list, which reverses the vocabulary mapping).
+    Returns
+    --------
+    vocab : a dictionary
+          Word to id. A dictionary mapping string to integers.
+    rev_vocab : a list
+          Id to word. The reversed vocabulary (a list, which reverses the vocabulary mapping).
 
-  Examples
-  ---------
-  >>> Assume 'test' contains
-  ... dog
-  ... cat
-  ... bird
-  >>> vocab, rev_vocab = tl.nlp.initialize_vocabulary("test")
-  >>> print(vocab)
-  >>> {b'cat': 1, b'dog': 0, b'bird': 2}
-  >>> print(rev_vocab)
-  >>> [b'dog', b'cat', b'bird']
+    Examples
+    ---------
+    >>> Assume 'test' contains
+    ... dog
+    ... cat
+    ... bird
+    >>> vocab, rev_vocab = tl.nlp.initialize_vocabulary("test")
+    >>> print(vocab)
+    >>> {b'cat': 1, b'dog': 0, b'bird': 2}
+    >>> print(rev_vocab)
+    >>> [b'dog', b'cat', b'bird']
 
-  Raises
-  -------
-  ValueError : if the provided vocabulary_path does not exist.
-  """
-  if gfile.Exists(vocabulary_path):
-    rev_vocab = []
-    with gfile.GFile(vocabulary_path, mode="rb") as f:
-      rev_vocab.extend(f.readlines())
-    rev_vocab = [tf.compat.as_bytes(line.strip()) for line in rev_vocab]
-    vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
-    return vocab, rev_vocab
-  else:
-    raise ValueError("Vocabulary file %s not found.", vocabulary_path)
+    Raises
+    -------
+    ValueError : if the provided vocabulary_path does not exist.
+    """
+    if gfile.Exists(vocabulary_path):
+        rev_vocab = []
+        with gfile.GFile(vocabulary_path, mode="rb") as f:
+            rev_vocab.extend(f.readlines())
+        rev_vocab = [tf.compat.as_bytes(line.strip()) for line in rev_vocab]
+        vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
+        return vocab, rev_vocab
+    else:
+        raise ValueError("Vocabulary file %s not found.", vocabulary_path)
+
 
 def sentence_to_token_ids(sentence, vocabulary,
                           tokenizer=None, normalize_digits=True,
                           UNK_ID=3, _DIGIT_RE=re.compile(br"\d")):
-  """Convert a string to list of integers representing token-ids.
+    """Convert a string to list of integers representing token-ids.
 
-  For example, a sentence "I have a dog" may become tokenized into
-  ["I", "have", "a", "dog"] and with vocabulary {"I": 1, "have": 2,
-  "a": 4, "dog": 7"} this function will return [1, 2, 4, 7].
+    For example, a sentence "I have a dog" may become tokenized into
+    ["I", "have", "a", "dog"] and with vocabulary {"I": 1, "have": 2,
+    "a": 4, "dog": 7"} this function will return [1, 2, 4, 7].
 
-  Parameters
-  -----------
-  sentence :  tensorflow.python.platform.gfile.GFile Object
-        The sentence in bytes format to convert to token-ids.\n
-        see basic_tokenizer(), data_to_token_ids()
-  vocabulary : a dictionary mapping tokens to integers.
-  tokenizer : a function to use to tokenize each sentence;
-        If None, basic_tokenizer will be used.
-  normalize_digits : Boolean
-        If true, all digits are replaced by 0s.
+    Parameters
+    -----------
+    sentence :  tensorflow.python.platform.gfile.GFile Object
+          The sentence in bytes format to convert to token-ids.\n
+          see basic_tokenizer(), data_to_token_ids()
+    vocabulary : a dictionary mapping tokens to integers.
+    tokenizer : a function to use to tokenize each sentence;
+          If None, basic_tokenizer will be used.
+    normalize_digits : Boolean
+          If true, all digits are replaced by 0s.
 
-  Returns
-  --------
-  A list of integers, the token-ids for the sentence.
-  """
+    Returns
+    --------
+    A list of integers, the token-ids for the sentence.
+    """
 
-  if tokenizer:
-    words = tokenizer(sentence)
-  else:
-    words = basic_tokenizer(sentence)
-  if not normalize_digits:
-    return [vocabulary.get(w, UNK_ID) for w in words]
-  # Normalize digits by 0 before looking words up in the vocabulary.
-  return [vocabulary.get(re.sub(_DIGIT_RE, b"0", w), UNK_ID) for w in words]
+    if tokenizer:
+        words = tokenizer(sentence)
+    else:
+        words = basic_tokenizer(sentence)
+    if not normalize_digits:
+        return [vocabulary.get(w, UNK_ID) for w in words]
+    # Normalize digits by 0 before looking words up in the vocabulary.
+    return [vocabulary.get(re.sub(_DIGIT_RE, b"0", w), UNK_ID) for w in words]
+
 
 def data_to_token_ids(data_path, target_path, vocabulary_path,
                       tokenizer=None, normalize_digits=True,
                       UNK_ID=3, _DIGIT_RE=re.compile(br"\d")):
-  """Tokenize data file and turn into token-ids using given vocabulary file.
+    """Tokenize data file and turn into token-ids using given vocabulary file.
 
-  This function loads data line-by-line from data_path, calls the above
-  sentence_to_token_ids, and saves the result to target_path. See comment
-  for sentence_to_token_ids on the details of token-ids format.
+    This function loads data line-by-line from data_path, calls the above
+    sentence_to_token_ids, and saves the result to target_path. See comment
+    for sentence_to_token_ids on the details of token-ids format.
 
-  Parameters
-  -----------
-  data_path : path to the data file in one-sentence-per-line format.
-  target_path : path where the file with token-ids will be created.
-  vocabulary_path : path to the vocabulary file.
-  tokenizer : a function to use to tokenize each sentence;
-      if None, basic_tokenizer will be used.
-  normalize_digits : Boolean; if true, all digits are replaced by 0s.
+    Parameters
+    -----------
+    data_path : path to the data file in one-sentence-per-line format.
+    target_path : path where the file with token-ids will be created.
+    vocabulary_path : path to the vocabulary file.
+    tokenizer : a function to use to tokenize each sentence;
+        if None, basic_tokenizer will be used.
+    normalize_digits : Boolean; if true, all digits are replaced by 0s.
 
-  References
-  ----------
-  - Code from ``/tensorflow/models/rnn/translation/data_utils.py``
-  """
-  if not gfile.Exists(target_path):
-    print("Tokenizing data in %s" % data_path)
-    vocab, _ = initialize_vocabulary(vocabulary_path)
-    with gfile.GFile(data_path, mode="rb") as data_file:
-      with gfile.GFile(target_path, mode="w") as tokens_file:
-        counter = 0
-        for line in data_file:
-          counter += 1
-          if counter % 100000 == 0:
-            print("  tokenizing line %d" % counter)
-          token_ids = sentence_to_token_ids(line, vocab, tokenizer,
-                                            normalize_digits, UNK_ID=UNK_ID,
-                                            _DIGIT_RE=_DIGIT_RE)
-          tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
-  else:
-    print("Target path %s exists" % target_path)
+    References
+    ----------
+    - Code from ``/tensorflow/models/rnn/translation/data_utils.py``
+    """
+    if not gfile.Exists(target_path):
+        print("Tokenizing data in %s" % data_path)
+        vocab, _ = initialize_vocabulary(vocabulary_path)
+        with gfile.GFile(data_path, mode="rb") as data_file:
+            with gfile.GFile(target_path, mode="w") as tokens_file:
+                counter = 0
+                for line in data_file:
+                    counter += 1
+                    if counter % 100000 == 0:
+                        print("  tokenizing line %d" % counter)
+                    token_ids = sentence_to_token_ids(line, vocab, tokenizer,
+                                                      normalize_digits, UNK_ID=UNK_ID,
+                                                      _DIGIT_RE=_DIGIT_RE)
+                    tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
+    else:
+        print("Target path %s exists" % target_path)

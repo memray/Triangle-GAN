@@ -1,7 +1,6 @@
 import lasagne
-from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 import theano.tensor as T
-import theano
+from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 
 class GaussianSampleLayer(lasagne.layers.MergeLayer):
@@ -25,6 +24,7 @@ class GaussianSampleLayer(lasagne.layers.MergeLayer):
             "Auto-Encoding Variational Bayes."
             arXiv preprint arXiv:1312.6114 (2013).
     """
+
     def __init__(self, mean, log_var,
                  seed=None,
                  **kwargs):
@@ -47,6 +47,7 @@ class GaussianSampleLayer(lasagne.layers.MergeLayer):
         eps = self._srng.normal(mu.shape)
         z = mu + T.exp(0.5 * log_var) * eps
         return z
+
 
 class BernoulliSampleLayer(lasagne.layers.Layer):
     """
