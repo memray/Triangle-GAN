@@ -15,16 +15,16 @@ from model_fancyCelebA_utils import encoder1, encoder2, SN_discriminator
 import scipy.io as sio
 import h5py
 import time
-import cPickle
+import pickle
 
 """ parameters """
 n_epochs = 10
 dataset_size = 50000
-mb_size = 64
+mb_size = 16
 # X_dim = ()
 lr = 1e-4
-Z_dim = 100
-Y_dim = 40
+Z_dim = 100 # dim of noise
+Y_dim = 40  # number of attributes
 
 
 #####################################
@@ -33,10 +33,11 @@ def log(x):
 
 
 """ data pre-process """
-hdf5_root = '/home/lqchen/work/pixel-cnn-3/data/CelebA/'
+hdf5_root = '/home/memray/Data/celeba/'
+# hdf5_root = '/home/lqchen/work/pixel-cnn-3/data/CelebA/'
 f = h5py.File('%sceleba_64.hdf5' % hdf5_root)
 Images = np.float32(f['features']) / 127.5 - 1.
-feature_data = scipy.io.loadmat('/home/lqchen/work/triGan/celebA/celebA_tag_feats.mat')
+feature_data = scipy.io.loadmat('%s/celebA_tag_feats.mat' % hdf5_root)
 
 tag_feats_all = np.float32(feature_data['feats'])
 tag_feats = tag_feats_all[:162770]
@@ -46,7 +47,7 @@ sio.savemat('./evaluation/10/tag_feats_val.mat', {'feats_val': tag_feats_val})
 sio.savemat('./evaluation/10/tag_feats_test.mat', {'feats_test': tag_feats_test})
 del feature_data, tag_feats_all
 
-Images_all = np.transpose(Images, [0, 2, 3, 1])
+Images_all = np.transpose(Images, [0, 2, 3, 1]) # make it [n_images, x, y, n_channel]
 Images = Images_all[:162770]
 Images_val = Images_all[162770: 182637]
 Images_test = Images_all[182637:]
@@ -58,7 +59,7 @@ num_test = Images_test.shape[0]
 
 """ tag name"""
 tag_names = []
-with open('./celebA_tag_names.txt', 'rb') as f:
+with open('./celebA_tag_names.txt', 'r') as f:
     for line in f:
         tag_names = line.strip().split(",")
 
@@ -134,11 +135,11 @@ def data_network_2(x, y, reuse=None):
 """ Construct model and training ops """
 # tf.reset_default_graph()
 
-X_p = tf.placeholder(tf.float32, shape=[mb_size, 64, 64, 3])
-y_p = tf.placeholder(tf.float32, shape=[mb_size, Y_dim])
-X_u = tf.placeholder(tf.float32, shape=[mb_size, 64, 64, 3])
-y_u = tf.placeholder(tf.float32, shape=[mb_size, Y_dim])
-z = tf.placeholder(tf.float32, shape=[mb_size, Z_dim])
+X_p = tf.placeholder(tf.float32, shape=[mb_size, 64, 64, 3]) # Real image X
+y_p = tf.placeholder(tf.float32, shape=[mb_size, Y_dim])     # Real attribute y
+X_u = tf.placeholder(tf.float32, shape=[mb_size, 64, 64, 3]) # Fake image X_tilde
+y_u = tf.placeholder(tf.float32, shape=[mb_size, Y_dim])     # Fake attribute y_tilde
+z = tf.placeholder(tf.float32, shape=[mb_size, Z_dim])       # noise
 
 # Discriminator A
 y_gen = generative_X2Y(X_u)

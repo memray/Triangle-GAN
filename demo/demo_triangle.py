@@ -63,10 +63,10 @@ D_B = torch.nn.Sequential(
 )
 
 
-# G_AB.cuda()
-# G_BA.cuda()
-# D_A.cuda()
-# D_B.cuda()
+G_AB.cuda()
+G_BA.cuda()
+D_A.cuda()
+D_B.cuda()
 
 
 def reset_grad():
@@ -125,19 +125,19 @@ np.random.shuffle(toy_data)
 
 real_label = 1
 fake_label = 0
-# real_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
-real_tensor = Variable(torch.FloatTensor(mb_size))
+real_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
+# real_tensor = Variable(torch.FloatTensor(mb_size))
 _ = real_tensor.data.fill_(real_label)
 
-# paired_real_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
-paired_real_tensor = Variable(torch.FloatTensor(mb_size))
+paired_real_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
+# paired_real_tensor = Variable(torch.FloatTensor(mb_size))
 _ = paired_real_tensor.data.fill_(real_label)
 
-# fake_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
-fake_tensor = Variable(torch.FloatTensor(mb_size))
+fake_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
+# fake_tensor = Variable(torch.FloatTensor(mb_size))
 _ = fake_tensor.data.fill_(fake_label)
 
-for it in range(0, 1000):
+for it in range(0, 10000):
     print('iter = %d' % it)
 
     kf = get_minibatches_idx(data_nbr, mb_size)
@@ -146,24 +146,24 @@ for it in range(0, 1000):
         critic = n_critic
 
         x_n1 = np.random.normal(0, noise, (mb_size, x_dim))
-        # x_n1 = Variable(torch.from_numpy(x_n1).cuda())
-        x_n1 = Variable(torch.from_numpy(x_n1))
+        x_n1 = Variable(torch.from_numpy(x_n1).cuda())
+        # x_n1 = Variable(torch.from_numpy(x_n1))
         x_n1 = x_n1.float()
 
         x_n2 = np.random.normal(0, noise, (mb_size, x_dim))
-        # x_n2 = Variable(torch.from_numpy(x_n2).cuda())
-        x_n2 = Variable(torch.from_numpy(x_n2))
+        x_n2 = Variable(torch.from_numpy(x_n2).cuda())
+        # x_n2 = Variable(torch.from_numpy(x_n2))
         x_n2 = x_n2.float()
 
         x_A = toy_data[kf[i][1]][:, 0].reshape((-1, 1))
-        # x_A = Variable(torch.from_numpy(x_A).cuda())
-        x_A = Variable(torch.from_numpy(x_A))
+        x_A = Variable(torch.from_numpy(x_A).cuda())
+        # x_A = Variable(torch.from_numpy(x_A))
         x_A = x_A.float()
         x_An = torch.cat((x_n1, x_n2, x_A), 1)
 
         x_B = toy_data[kf[i][1]][:, 1].reshape((-1, 1))
-        # x_B = Variable(torch.from_numpy(x_B).cuda())
-        x_B = Variable(torch.from_numpy(x_B))
+        x_B = Variable(torch.from_numpy(x_B).cuda())
+        # x_B = Variable(torch.from_numpy(x_B))
         x_B = x_B.float()
         x_Bn = torch.cat((x_n1, x_n2, x_B), 1)
 
@@ -205,19 +205,20 @@ for it in range(0, 1000):
         l_gan_A = bce(D_A(x_fakeAB), real_tensor) + bce(D_B(x_fakeAB), fake_tensor)
         l_gan_B = bce(D_A(x_fakeBA), real_tensor) + bce(D_B(x_fakeBA), real_tensor)
 
-    l_g = l_gan_A + l_gan_B
-    l_g.backward()
-    G_solver.step()
+        l_g = l_gan_A + l_gan_B
+        l_g.backward()
+        G_solver.step()
 
-    # Housekeeping - reset gradient
-    reset_grad()
+        # Housekeeping - reset gradient
+        reset_grad()
 
-# Print and plot every now and then
-print('Iter-{}; D_loss: {}; Gen_loss: {}'
-      .format(it, l_d.data[0], l_g.data[0]))
-sample_x_real = x_real.cpu().data.numpy()
-plot_z(sample_x_real, -3, 3, -3, 3, './triangleGAN', 'real_samples')
-sample_x_AB = x_fakeAB.cpu().data.numpy()
-sample_x_BA = x_fakeBA.cpu().data.numpy()
-plot_z(sample_x_AB, -3, 3, -3, 3, './triangleGAN', 'fake_AB_in_' + str(it))
-plot_z(sample_x_BA, -3, 3, -3, 3, './triangleGAN', 'fake_BA_in_' + str(it))
+    if it % 500 == 0:
+        # Print and plot every now and then
+        print('Iter-{}; D_loss: {}; Gen_loss: {}'
+              .format(it, l_d.data[0], l_g.data[0]))
+        sample_x_real = x_real.cpu().data.numpy()
+        plot_z(sample_x_real, -3, 3, -3, 3, './triangleGAN', 'real_samples')
+        sample_x_AB = x_fakeAB.cpu().data.numpy()
+        sample_x_BA = x_fakeBA.cpu().data.numpy()
+        plot_z(sample_x_AB, -3, 3, -3, 3, './triangleGAN', 'fake_AB_in_' + str(it))
+        plot_z(sample_x_BA, -3, 3, -3, 3, './triangleGAN', 'fake_BA_in_' + str(it))

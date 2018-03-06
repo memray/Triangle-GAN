@@ -11,11 +11,11 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 # from model_coco_utils import encoder1, encoder2, discriminator
-from model_fancyCOCO_utils import encoder1, encoder2, discriminator
+from .model_fancyCOCO_utils import encoder1, encoder2, discriminator
 import scipy.io as sio
 import h5py
-import cPickle
-from eval import diff
+import pickle
+from .eval import diff
 
 """ parameters """
 dataset_size = 50000
@@ -35,11 +35,12 @@ def log(x):
 
 """ Create dataset """
 img_size = 64
-hdf5_root = '/media/lqchen/MyFiles/Data/coco/'
+hdf5_root = '/home/memray/Data/coco/output/coco/'
 f = h5py.File('%scoco_img_%d.h5' % (hdf5_root, img_size))
 Images = np.float32(f['images']) / 127.5 - 1.
+feature_data = sio.loadmat('/home/memray/Data/coco/zhegan/tag_feats.mat')
 # feature_data = scipy.io.loadmat('/media/lqchen/MyFiles/Data/coco/coco_tag_feats.mat')
-feature_data = h5py.File('/media/lqchen/MyFiles/Data/coco/coco_tag_feat_binary.hdf5')
+# feature_data = h5py.File('/media/lqchen/MyFiles/Data/coco/coco_tag_feat_binary.hdf5')
 tag_feats = np.float32(feature_data['feats'])
 Images = np.transpose(Images, [0, 2, 3, 1])
 del feature_data

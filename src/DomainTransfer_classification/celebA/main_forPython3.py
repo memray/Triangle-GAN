@@ -12,7 +12,7 @@ import scipy.ndimage.interpolation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 # from model_py35 import encoder1, encoder2, discriminator, SN_discriminator
-from model_fancyCelebA_utils import encoder1, encoder2, SN_discriminator
+from src.DomainTransfer_classification.celebA.model_fancyCelebA_utils import encoder1, encoder2, SN_discriminator
 import h5py
 
 # import cPickle

@@ -78,7 +78,7 @@ def get_minibatches_idx(n, minibatch_size, shuffle=True):
         # Make a minibatch out of what is left
         minibatches.append(idx_list[minibatch_start:])
 
-    return zip(range(len(minibatches)), minibatches)
+    return list(zip(range(len(minibatches)), minibatches))
 
 
 bce = torch.nn.BCELoss().cuda()
@@ -119,9 +119,11 @@ _ = paired_real_tensor.data.fill_(real_label)
 fake_tensor = Variable(torch.FloatTensor(mb_size)).cuda()
 _ = fake_tensor.data.fill_(fake_label)
 
-for it in range(0, 1000):
+for it in range(0, 10000):
+    print('iter = %d' % it)
+
     kf = get_minibatches_idx(data_nbr, mb_size)
-    for i in range(data_nbr / mb_size):
+    for i in range(data_nbr // mb_size):
 
         critic = n_critic
 
@@ -182,12 +184,13 @@ for it in range(0, 1000):
         # Housekeeping - reset gradient
         reset_grad()
 
-    # Print and plot every now and then
-    print('Iter-{}; D_loss: {}; Gen_loss: {}'
-          .format(it, l_d.data[0], l_g.data[0]))
-    sample_x_real = x_real.cpu().data.numpy()
-    plot_z(sample_x_real, -3, 3, -3, 3, './tripleGAN', 'real_samples')
-    sample_x_AB = x_fakeAB.cpu().data.numpy()
-    sample_x_BA = x_fakeBA.cpu().data.numpy()
-    plot_z(sample_x_AB, -3, 3, -3, 3, './tripleGAN', 'fake_AB_in_' + str(it))
-    plot_z(sample_x_BA, -3, 3, -3, 3, './tripleGAN', 'fake_BA_in_' + str(it))
+    if it % 500 == 0:
+        # Print and plot every now and then
+        print('Iter-{}; D_loss: {}; Gen_loss: {}'
+              .format(it, l_d.data[0], l_g.data[0]))
+        sample_x_real = x_real.cpu().data.numpy()
+        plot_z(sample_x_real, -3, 3, -3, 3, './tripleGAN', 'real_samples')
+        sample_x_AB = x_fakeAB.cpu().data.numpy()
+        sample_x_BA = x_fakeBA.cpu().data.numpy()
+        plot_z(sample_x_AB, -3, 3, -3, 3, './tripleGAN', 'fake_AB_in_' + str(it))
+        plot_z(sample_x_BA, -3, 3, -3, 3, './tripleGAN', 'fake_BA_in_' + str(it))

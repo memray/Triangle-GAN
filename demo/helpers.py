@@ -97,7 +97,7 @@ def plot_z(z_batch, a, b, c, d, dir=None, filename="z"):
               "#6a6551"]
     pylab.clf()
     for n in range(z_batch.shape[0]):
-        print(np.floor_divide(n,(z_batch.shape[0]/10)))
+        # print(np.floor_divide(n,(z_batch.shape[0]/10)))
         # result = pylab.scatter(z_batch[n, 0], z_batch[n, 1], c=colors[np.floor_divide(n,1+(np.floor_divide(z_batch.shape[0],10)))], s=40, marker="o", edgecolors='none')
         result = pylab.scatter(z_batch[n, 0], z_batch[n, 1], c=colors[0], s=40, marker="o", edgecolors='none')
     pylab.xlabel("")
