@@ -4,22 +4,24 @@ from __future__ import print_function
 
 import os
 
-GPUID = 1
-os.environ["CUDA_VISIBLE_DEVICES"] = str(GPUID)
+# GPUID = 0
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(GPUID)
 import numpy as np
 import tensorflow as tf
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 # from model_coco_utils import encoder1, encoder2, discriminator
-from .model_fancyCOCO_utils import encoder1, encoder2, discriminator
+from model_fancyCOCO_utils import encoder1, encoder2, discriminator
 import scipy.io as sio
 import h5py
 import pickle
-from .eval import diff
+from eval import diff
 
 """ parameters """
 dataset_size = 50000
-mb_size = 64
+mb_size = 32
 X_dim = 784
 lr = 1e-4
 Z_dim = 128
@@ -35,20 +37,20 @@ def log(x):
 
 """ Create dataset """
 img_size = 64
-hdf5_root = '/home/memray/Data/coco/output/coco/'
-f = h5py.File('%scoco_img_%d.h5' % (hdf5_root, img_size))
+hdf5_root = '/home/memray/Data/coco/output/'
+f = h5py.File('%scoco_img_%d.hdf5' % (hdf5_root, img_size))
 Images = np.float32(f['images']) / 127.5 - 1.
 feature_data = sio.loadmat('/home/memray/Data/coco/zhegan/tag_feats.mat')
 # feature_data = scipy.io.loadmat('/media/lqchen/MyFiles/Data/coco/coco_tag_feats.mat')
 # feature_data = h5py.File('/media/lqchen/MyFiles/Data/coco/coco_tag_feat_binary.hdf5')
-tag_feats = np.float32(feature_data['feats'])
+tag_feats = np.float32(feature_data['feats']).T
 Images = np.transpose(Images, [0, 2, 3, 1])
 del feature_data
 
 ## index for train validation and test
-with open('train_list', 'rb') as fp: train_id = cPickle.load(fp)
-with open('val_list', 'rb') as fp: val_id = cPickle.load(fp)
-with open('test_list', 'rb') as fp: test_id = cPickle.load(fp)
+with open(hdf5_root+'train_list.pkl', 'rb') as fp: train_id = pickle.load(fp)
+with open(hdf5_root+'val_list.pkl', 'rb') as fp: val_id     = pickle.load(fp)
+with open(hdf5_root+'test_list.pkl', 'rb') as fp: test_id   = pickle.load(fp)
 fp.close()
 
 val_Images = Images[val_id]
@@ -67,7 +69,7 @@ sio.savemat('./evaluation/50/tag_feats_test.mat', {'feats_test': test_tags})
 """ data pre-process """
 
 """ tag name"""
-x = cPickle.load(open("/media/lqchen/MyFiles/Data/coco/coco_tag_vocab.p", "rb"))
+x = pickle.load(open("/home/memray/Data/coco/zhegan/tag_vocab.p", "rb"))
 wordtoix, ixtoword = x[0], x[1]
 del x
 
@@ -126,14 +128,14 @@ def generative_X2Y(x):
 
 def data_network_1(x, y):
     """Approximate z log data density."""
-    with tf.variable_scope('D1'):
+    with tf.variable_scope('D1', reuse=tf.AUTO_REUSE):
         d = discriminator(x, y)
     return tf.squeeze(d, squeeze_dims=[1])
 
 
 def data_network_2(x, y):
     """Approximate z log data density."""
-    with tf.variable_scope('D2'):
+    with tf.variable_scope('D2', reuse=tf.AUTO_REUSE):
         d = discriminator(x, y)
     return tf.squeeze(d, squeeze_dims=[1])
 
@@ -148,38 +150,38 @@ y_u = tf.placeholder(tf.float32, shape=[mb_size, Y_dim])
 z = tf.placeholder(tf.float32, shape=[mb_size, Z_dim])
 
 # Discriminator A
-y_gen = generative_X2Y(X_u)
-X_gen = generative_Y2X(y_u, z)
-D1_real = data_network_1(X_p, y_p)
-D1_fake_y = data_network_1(X_u, y_gen)
-D1_fake_X = data_network_1(X_gen, y_u)
+y_gen       = generative_X2Y(X_u)
+X_gen       = generative_Y2X(y_u, z)
+D1_real     = data_network_1(X_p, y_p)
+D1_fake_y   = data_network_1(X_u, y_gen)
+D1_fake_X   = data_network_1(X_gen, y_u)
 
 # Discriminator B
-D2_real = data_network_2(X_u, y_gen)
-D2_fake = data_network_2(X_gen, y_u)
+D2_real     = data_network_2(X_u, y_gen)
+D2_fake     = data_network_2(X_gen, y_u)
 
 # Discriminator loss
-L_D1 = -tf.reduce_mean(log(D1_real) + log(1 - D1_fake_y) + log(1 - D1_fake_X))
-L_D2 = -tf.reduce_mean(log(D2_real) + log(1 - D2_fake))
+L_D1        = -tf.reduce_mean(log(D1_real) + log(1 - D1_fake_y) + log(1 - D1_fake_X))
+L_D2        = -tf.reduce_mean(log(D2_real) + log(1 - D2_fake))
 
-D_loss = L_D1 + L_D2
+D_loss      = L_D1 + L_D2
 
 # Generator loss
-L_G1 = -tf.reduce_mean(log(D1_fake_y) + log(1 - D2_real))
-L_G2 = -tf.reduce_mean(log(D1_fake_X) + log(D2_fake))
+L_G1        = -tf.reduce_mean(log(D1_fake_y) + log(1 - D2_real))
+L_G2        = -tf.reduce_mean(log(D1_fake_X) + log(D2_fake))
 
-G_loss = L_G1 + L_G2
+G_loss      = L_G1 + L_G2
 
 # Solvers
 
-gvar1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "Y2X")
-gvar2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "X2Y")
-dvars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "D1")
-dvars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "D2")
-opt = tf.train.AdamOptimizer(lr, beta1=0.5)
+gvar1       = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "Y2X")
+gvar2       = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "X2Y")
+dvars1      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "D1")
+dvars2      = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "D2")
+opt         = tf.train.AdamOptimizer(lr, beta1=0.5)
 
-D_solver = opt.minimize(D_loss, var_list=dvars1 + dvars2)
-G_solver = opt.minimize(G_loss, var_list=gvar1 + gvar2)
+D_solver    = opt.minimize(D_loss, var_list=dvars1 + dvars2)
+G_solver    = opt.minimize(G_loss, var_list=gvar1 + gvar2)
 
 # Call this after declaring all tf.Variables.
 saver = tf.train.Saver()
@@ -218,8 +220,8 @@ for it in range(n_epochs):
             _, G_loss_curr = sess.run([G_solver, G_loss],
                                       feed_dict={X_p: X_p_mb, y_p: y_p_mb, X_u: X_u_mb, y_u: y_u_mb, z: z_sample})
 
-        if idx % 200 == 0:
-            print('Epoch: {}; Iter: {}; D_loss: {:.4}; G_loss: {:.4}'.format(it, idx, D_loss_curr, G_loss_curr))
+        print('Epoch: {}/{}; Iter: {}/{}; D_loss: {:.4}; G_loss: {:.4}'.format(it, n_epochs, idx, num_train // mb_size, D_loss_curr, G_loss_curr))
+        if idx % 100 == 0:
             print("start plotting")
             # input_A = sample_X(X_unlabeled, size=16)
             input_B = sample_Y(tag_feats, size=mb_size)
@@ -251,6 +253,7 @@ for it in range(n_epochs):
 
             saver.save(sess, './model/50/model_trigan_coco_test_50.ckpt')
             print("Finish saving")
+
     if it % 1 == 0:
         # Test on the validation dataset
 

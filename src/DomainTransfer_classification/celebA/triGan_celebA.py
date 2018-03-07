@@ -4,10 +4,12 @@ from __future__ import print_function
 
 import os
 
-GPUID = 0
-os.environ["CUDA_VISIBLE_DEVICES"] = str(GPUID)
+# GPUID = 0
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(GPUID)
 import numpy as np
 import tensorflow as tf
+import tensorflow.contrib.eager as tfe
+
 import scipy.ndimage.interpolation
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -20,7 +22,7 @@ import pickle
 """ parameters """
 n_epochs = 10
 dataset_size = 50000
-mb_size = 16
+mb_size = 32
 # X_dim = ()
 lr = 1e-4
 Z_dim = 100 # dim of noise
@@ -181,12 +183,15 @@ saver = tf.train.Saver()
 
 """ training """
 config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.4
+# config.gpu_options.per_process_gpu_memory_fraction = 0.4
+
+tfe.enable_eager_execution()
 sess = tf.Session(config=config)
 
 ii = 0
 init = tf.global_variables_initializer()
-sess.run(init)
+# sess.run(init)
+
 # Load pretrained Model
 try:
     saver.restore(sess=sess, save_path="./model/model_trigan_CelebA.ckpt")

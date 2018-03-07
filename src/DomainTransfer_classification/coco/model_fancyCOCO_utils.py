@@ -1,6 +1,6 @@
 import tensorflow as tf
-from . import tensorlayer as tl
-from .tensorlayer.layers import *
+import tensorlayer as tl
+from tensorlayer.layers import *
 
 batch_size = 64
 
