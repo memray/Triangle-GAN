@@ -1,4 +1,11 @@
 src/DomainTransfer_classification/coco/data.h5
+src/DomainTransfer_classification/coco/evaluation/
+src/DomainTransfer_classification/coco/model/
+src/DomainTransfer_classification/coco/result/
+
+
+
+
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
