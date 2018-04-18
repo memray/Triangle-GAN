@@ -38,8 +38,12 @@ def log(x):
 """ Create dataset """
 img_size = 64
 hdf5_root = '/home/memray/Data/coco/output/'
+# load image data (64*64 images)
 f = h5py.File('%scoco_img_%d.hdf5' % (hdf5_root, img_size))
 Images = np.float32(f['images']) / 127.5 - 1.
+# load caption data ()
+
+# load image tags (1000 tags per image)
 feature_data = sio.loadmat('/home/memray/Data/coco/zhegan/tag_feats.mat')
 # feature_data = scipy.io.loadmat('/media/lqchen/MyFiles/Data/coco/coco_tag_feats.mat')
 # feature_data = h5py.File('/media/lqchen/MyFiles/Data/coco/coco_tag_feat_binary.hdf5')
